@@ -1,0 +1,30 @@
+name: Telegram Monitor 247
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Se ejecuta automáticamente cada 5 minutos
+  workflow_dispatch: # Permite probarlo de forma manual cuando quieras
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install telethon
+
+      - name: Run monitor script
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+          SESSION_STRING: ${{ secrets.SESSION_STRING }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CANAL_ID: ${{ secrets.CANAL_ID }}
+        run: python bot.py
