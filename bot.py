@@ -13,18 +13,12 @@ CANAL_ID = int(os.environ.get('CANAL_ID'))
 
 PALABRAS_CLAVE = ["silla", "arrancador", "portatil", "aspiradora"]
 
-def escapar_markdown(texto):
-    # Escapa caracteres especiales de Markdown en Telegram para evitar errores 400
-    for char in ['_', '*', '`', '[']:
-        texto = texto.replace(char, f"\\{char}")
-    return texto
-
 def enviar_alerta_bot(texto_alerta):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     datos = {
         "chat_id": CANAL_ID,
-        "text": texto_alerta,
-        "parse_mode": "Markdown"
+        "text": texto_alerta
+        # Quitamos parse_mode para evitar cualquier error de formato con caracteres especiales
     }
     datos_json = json.dumps(datos).encode('utf-8')
     peticion = urllib.request.Request(url, data=datos_json, headers={'Content-Type': 'application/json'})
@@ -65,20 +59,17 @@ async def main():
                 if dialog.entity and hasattr(dialog.entity, 'username') and dialog.entity.username:
                     link_mensaje = f"https://t.me/{dialog.entity.username}/{message.id}"
                 
-                # Limpiamos el texto del mensaje para que no rompa el Markdown de Telegram
-                mensaje_seguro = escapar_markdown(texto_mensaje)
-                
                 alerta = (
-                    f"⚠️ **¡Palabra clave detectada!**\n\n"
-                    f"📌 **Origen:** {nombre_canal_origen}\n"
-                    f"🔍 **Encontrada(s):** {coincidencias_str}\n"
+                    f"⚠️ ¡Palabra clave detectada!\n\n"
+                    f"📌 Origen: {nombre_canal_origen}\n"
+                    f"🔍 Encontrada(s): {coincidencias_str}\n"
                 )
                 if link_mensaje:
-                    alerta += f"🔗 [Ir al mensaje]({link_mensaje})\n\n"
+                    alerta += f"🔗 Ir al mensaje: {link_mensaje}\n\n"
                 else:
-                    alerta += f"🔒 *(Chat privado)*\n\n"
+                    alerta += f"🔒 (Chat privado)\n\n"
                 
-                alerta += f"💬 **Mensaje:**\n{mensaje_seguro}"
+                alerta += f"💬 Mensaje:\n{texto_mensaje}"
                 
                 enviar_alerta_bot(alerta)
                 break
