@@ -13,6 +13,12 @@ CANAL_ID = int(os.environ.get('CANAL_ID'))
 
 PALABRAS_CLAVE = ["silla", "arrancador", "portatil", "aspiradora"]
 
+def escapar_markdown(texto):
+    # Escapa caracteres especiales de Markdown en Telegram para evitar errores 400
+    for char in ['_', '*', '`', '[']:
+        texto = texto.replace(char, f"\\{char}")
+    return texto
+
 def enviar_alerta_bot(texto_alerta):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     datos = {
@@ -35,14 +41,11 @@ async def main():
     
     print("Conectado a Telegram. Buscando chats...")
     
-    # Recorremos los diálogos ordenando o filtrando para asegurar que leemos todo
     async for dialog in client.iter_dialogs(limit=40):
         if dialog.id == CANAL_ID:
             continue
             
-        # Comprobamos si tiene mensajes no leídos o si es de los primeros
-        is_unread = dialog.unread_count > 0
-        print(f"Revisando chat: '{dialog.title}' (No leídos: {dialog.unread_count})")
+        print(f"Revisando chat: '{dialog.title}'")
             
         async for message in client.iter_messages(dialog.id, limit=10):
             if not message.message:
@@ -50,9 +53,6 @@ async def main():
                 
             texto_mensaje = message.message
             texto_minusculas = texto_mensaje.lower()
-            
-            # Imprimimos los últimos mensajes para verlos en los logs de GitHub
-            print(f"  -> Msg ID {message.id}: {texto_mensaje[:50]}...")
             
             palabras_encontradas = [p for p in PALABRAS_CLAVE if p in texto_minusculas]
             
@@ -65,6 +65,9 @@ async def main():
                 if dialog.entity and hasattr(dialog.entity, 'username') and dialog.entity.username:
                     link_mensaje = f"https://t.me/{dialog.entity.username}/{message.id}"
                 
+                # Limpiamos el texto del mensaje para que no rompa el Markdown de Telegram
+                mensaje_seguro = escapar_markdown(texto_mensaje)
+                
                 alerta = (
                     f"⚠️ **¡Palabra clave detectada!**\n\n"
                     f"📌 **Origen:** {nombre_canal_origen}\n"
@@ -75,7 +78,7 @@ async def main():
                 else:
                     alerta += f"🔒 *(Chat privado)*\n\n"
                 
-                alerta += f"💬 **Mensaje:**\n{texto_mensaje}"
+                alerta += f"💬 **Mensaje:**\n{mensaje_seguro}"
                 
                 enviar_alerta_bot(alerta)
                 break
