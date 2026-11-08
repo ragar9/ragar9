@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.request
+import asyncio
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -54,7 +55,7 @@ async def main():
                 coincidencias_str = ", ".join(palabras_encontradas)
                 
                 link_mensaje = ""
-                if hasattr(dialog.entity, 'username') and dialog.entity.username:
+                if dialog.entity and hasattr(dialog.entity, 'username') and dialog.entity.username:
                     link_mensaje = f"https://t.me/{dialog.entity.username}/{message.id}"
                 
                 alerta = (
@@ -71,6 +72,8 @@ async def main():
                 
                 enviar_alerta_bot(alerta)
                 break
+                
+    await client.disconnect()
 
-with client := TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH):
-    client.loop.run_until_complete(main())
+if __name__ == '__main__':
+    asyncio.run(main())
