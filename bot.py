@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.request
+import urllib.error
 import asyncio
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -18,7 +19,6 @@ def enviar_alerta_bot(texto_alerta):
     datos = {
         "chat_id": CANAL_ID,
         "text": texto_alerta
-        # Quitamos parse_mode para evitar cualquier error de formato con caracteres especiales
     }
     datos_json = json.dumps(datos).encode('utf-8')
     peticion = urllib.request.Request(url, data=datos_json, headers={'Content-Type': 'application/json'})
@@ -26,6 +26,10 @@ def enviar_alerta_bot(texto_alerta):
         with urllib.request.urlopen(peticion, timeout=5) as respuesta:
             if respuesta.status == 200:
                 print("[ÉXITO] Alerta enviada al móvil.")
+    except urllib.error.HTTPError as e:
+        # Esto imprimirá exactamente qué dice Telegram que está mal en la petición
+        error_detalles = e.read().decode('utf-8')
+        print(f"[ERROR BOT HTTP {e.code}] Detalles: {error_detalles}")
     except Exception as e:
         print(f"[ERROR BOT] {e}")
 
@@ -59,6 +63,11 @@ async def main():
                 if dialog.entity and hasattr(dialog.entity, 'username') and dialog.entity.username:
                     link_mensaje = f"https://t.me/{dialog.entity.username}/{message.id}"
                 
+                # Recortamos el mensaje a 500 caracteres máximo para evitar textos gigantes o corruptos
+                mensaje_recortado = texto_mensaje[:500]
+                if len(texto_mensaje) > 500:
+                    mensaje_recortado += "..."
+                
                 alerta = (
                     f"⚠️ ¡Palabra clave detectada!\n\n"
                     f"📌 Origen: {nombre_canal_origen}\n"
@@ -69,7 +78,7 @@ async def main():
                 else:
                     alerta += f"🔒 (Chat privado)\n\n"
                 
-                alerta += f"💬 Mensaje:\n{texto_mensaje}"
+                alerta += f"💬 Mensaje:\n{mensaje_recortado}"
                 
                 enviar_alerta_bot(alerta)
                 break
