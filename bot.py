@@ -5,14 +5,12 @@ import asyncio
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-# Cargamos las credenciales seguras desde los secretos de GitHub
 API_ID = int(os.environ.get('API_ID'))
 API_HASH = os.environ.get('API_HASH')
 SESSION_STRING = os.environ.get('SESSION_STRING')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 CANAL_ID = int(os.environ.get('CANAL_ID'))
 
-# Tus palabras clave a vigilar
 PALABRAS_CLAVE = ["silla", "arrancador", "portatil", "aspiradora"]
 
 def enviar_alerta_bot(texto_alerta):
@@ -35,26 +33,31 @@ async def main():
     client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
     await client.start()
     
-    print("Iniciando revisión ampliada de chats...")
+    print("Conectado a Telegram. Buscando chats...")
     
-    # Ampliamos a 50 chats y 15 mensajes para asegurar que pille los no leídos recientes
-    async for dialog in client.iter_dialogs(limit=50):
+    # Recorremos los diálogos ordenando o filtrando para asegurar que leemos todo
+    async for dialog in client.iter_dialogs(limit=40):
         if dialog.id == CANAL_ID:
             continue
             
-        print(f"Revisando chat: {dialog.title}")
+        # Comprobamos si tiene mensajes no leídos o si es de los primeros
+        is_unread = dialog.unread_count > 0
+        print(f"Revisando chat: '{dialog.title}' (No leídos: {dialog.unread_count})")
             
-        async for message in client.iter_messages(dialog.id, limit=15):
+        async for message in client.iter_messages(dialog.id, limit=10):
             if not message.message:
                 continue
                 
             texto_mensaje = message.message
             texto_minusculas = texto_mensaje.lower()
             
+            # Imprimimos los últimos mensajes para verlos en los logs de GitHub
+            print(f"  -> Msg ID {message.id}: {texto_mensaje[:50]}...")
+            
             palabras_encontradas = [p for p in PALABRAS_CLAVE if p in texto_minusculas]
             
             if palabras_encontradas:
-                print(f"¡Coincidencia encontrada en {dialog.title}!")
+                print(f"¡COINCIDENCIA ENCONTRADA en '{dialog.title}': {palabras_encontradas}!")
                 nombre_canal_origen = dialog.title or "Canal/Grupo"
                 coincidencias_str = ", ".join(palabras_encontradas)
                 
@@ -63,12 +66,12 @@ async def main():
                     link_mensaje = f"https://t.me/{dialog.entity.username}/{message.id}"
                 
                 alerta = (
-                    f"⚠️ **¡Palabra clave detectada (Cloud)!**\n\n"
+                    f"⚠️ **¡Palabra clave detectada!**\n\n"
                     f"📌 **Origen:** {nombre_canal_origen}\n"
                     f"🔍 **Encontrada(s):** {coincidencias_str}\n"
                 )
                 if link_mensaje:
-                    alerta += f"🔗 [Ir al mensaje original]({link_mensaje})\n\n"
+                    alerta += f"🔗 [Ir al mensaje]({link_mensaje})\n\n"
                 else:
                     alerta += f"🔒 *(Chat privado)*\n\n"
                 
@@ -78,7 +81,7 @@ async def main():
                 break
                 
     await client.disconnect()
-    print("Revisión finalizada.")
+    print("Revisión completada.")
 
 if __name__ == '__main__':
     asyncio.run(main())
