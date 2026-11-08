@@ -35,13 +35,16 @@ async def main():
     client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
     await client.start()
     
-    print("Revisando mensajes recientes en chats...")
+    print("Iniciando revisión ampliada de chats...")
     
-    async for dialog in client.iter_dialogs(limit=25):
+    # Ampliamos a 50 chats y 15 mensajes para asegurar que pille los no leídos recientes
+    async for dialog in client.iter_dialogs(limit=50):
         if dialog.id == CANAL_ID:
             continue
             
-        async for message in client.iter_messages(dialog.id, limit=5):
+        print(f"Revisando chat: {dialog.title}")
+            
+        async for message in client.iter_messages(dialog.id, limit=15):
             if not message.message:
                 continue
                 
@@ -51,6 +54,7 @@ async def main():
             palabras_encontradas = [p for p in PALABRAS_CLAVE if p in texto_minusculas]
             
             if palabras_encontradas:
+                print(f"¡Coincidencia encontrada en {dialog.title}!")
                 nombre_canal_origen = dialog.title or "Canal/Grupo"
                 coincidencias_str = ", ".join(palabras_encontradas)
                 
@@ -74,6 +78,7 @@ async def main():
                 break
                 
     await client.disconnect()
+    print("Revisión finalizada.")
 
 if __name__ == '__main__':
     asyncio.run(main())
